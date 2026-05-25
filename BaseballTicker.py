@@ -64,3 +64,4 @@ try {{
 st.components.v1.html(title_js, height=0)
 
 st.caption(f"Auto-refresh every {REFRESH_SECONDS}s — data from MLB Stats API.")
+print("hi")
