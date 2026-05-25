@@ -155,83 +155,106 @@ def fetch_game_live(gamePk: int) -> tuple[dict | None, dict]:
 # -------------------------------------------------
 # Score + inning extraction
 # -------------------------------------------------
-
 def extract_score_and_inning(live_json: dict) -> dict[str, str]:
     """
     Extracts scoreboard information from the MLB live game feed.
 
-    Returns:
-        {
-            "away_score": str,
-            "home_score": str,
-            "inning_abbrev": str,   # e.g. "T3", "B7"
-            "state_text": str,
-            "outs": str,
-            "has_linescore": bool
-        }
+    Guarantees:
+      - inning_abbrev is always set and will be 'T{n}' or 'B{n}' when possible
+      - scores are returned as strings
+      - state_text contains the MLB detailedState for fallbacks
     """
     ld = live_json.get("liveData", {}) or {}
     linescore = ld.get("linescore", {}) or {}
     teams = linescore.get("teams", {}) or {}
 
+    # --- Scores ---
     away_score = teams.get("away", {}).get("runs")
     home_score = teams.get("home", {}).get("runs")
 
-    raw_inning = (
-        linescore.get("currentInningOrdinal")
-        or linescore.get("currentInning")
-        or ld.get("plays", {}).get("currentPlay", {}).get("about", {}).get("inning")
+    away_score_str = "0" if away_score is None else str(away_score)
+    home_score_str = "0" if home_score is None else str(home_score)
+
+    # --- Inning number and state ---
+    inning_num = linescore.get("currentInning")
+    inning_state = (linescore.get("inningState") or "").lower()
+
+    # --- Outs (kept for completeness; formatter can ignore) ---
+    outs = linescore.get("outs")
+    outs_str = "" if outs is None else str(outs)
+
+    # Determine inning abbreviation (force to T# or B#)
+    # Prefer the explicit inning number from linescore; fall back to parsing any provided abbrev
+    if inning_num is None:
+        # try to parse digits from any available fields
+        raw_abbrev = linescore.get("inningOrdinal") or linescore.get("currentInningOrdinal") or ""
+        digits = "".join(ch for ch in str(raw_abbrev) if ch.isdigit())
+        inning_num = int(digits) if digits else None
+
+    # final fallback to 1 if nothing available
+    if not inning_num:
+        inning_num = 1
+
+    # Decide top/bottom
+    if inning_state.startswith("top"):
+        inning_abbrev = f"T{inning_num}"
+    elif inning_state.startswith("bottom"):
+        inning_abbrev = f"B{inning_num}"
+    else:
+        # If MLB doesn't provide a clear top/bottom (e.g., "Middle", "End", or empty),
+        # try to inspect plays.currentPlay.about.halfInning if present, otherwise default to Top.
+        half = (
+            ld.get("plays", {})
+            .get("currentPlay", {})
+            .get("about", {})
+            .get("halfInning", "")
+        )
+        half = (half or "").lower()
+        if half.startswith("bottom"):
+            inning_abbrev = f"B{inning_num}"
+        elif half.startswith("top"):
+            inning_abbrev = f"T{inning_num}"
+        else:
+            # conservative default
+            inning_abbrev = f"T{inning_num}"
+
+    # --- Game state text ---
+    state_text = (
+        live_json.get("gameData", {})
+        .get("status", {})
+        .get("detailedState", "")
     )
 
-    inning_ordinal = "".join(ch for ch in str(raw_inning) if ch.isdigit()) if raw_inning else ""
-
-    half = (
-        ld.get("plays", {}).get("currentPlay", {}).get("about", {}).get("halfInning")
-        or linescore.get("inningState")
-        or ""
-    ).lower()
-
-    if inning_ordinal:
-        if half.startswith("top"):
-            inning_abbrev = f"T{inning_ordinal}"
-        elif half.startswith("bottom"):
-            inning_abbrev = f"B{inning_ordinal}"
-        else:
-            inning_abbrev = f"I{inning_ordinal}"
-    else:
-        inning_abbrev = ""
-
-    outs = linescore.get("outs")
-    if outs is None:
-        outs = ld.get("plays", {}).get("currentPlay", {}).get("about", {}).get("outs")
-
     return {
-        "away_score": str(away_score or ""),
-        "home_score": str(home_score or ""),
+        "away_score": away_score_str,
+        "home_score": home_score_str,
         "inning_abbrev": inning_abbrev,
-        "state_text": live_json.get("gameData", {}).get("status", {}).get("detailedState", ""),
-        "outs": str(outs or ""),
+        "state_text": state_text,
+        "outs": outs_str,
         "has_linescore": bool(linescore)
     }
+
 
 # -------------------------------------------------
 # Game formatting
 # -------------------------------------------------
-
 def format_game_item(g: dict) -> str:
     """
     Formats a single MLB game into a compact scoreboard string.
 
-    Examples:
-        "NYY 2@TB 0 — T3 O1"
-        "LAD @ SF • Scheduled 4:40PM"
+    New format example:
+        "T3: NYY 2 @ TB 0"
+
+    Guarantees:
+      - inning is always shown as T# or B#
+      - outs are not displayed
+      - pregame/fallback uses the detailed/abstract state and start time
     """
     pk = g.get("gamePk")
     away_team = g["teams"]["away"]["team"]
     home_team = g["teams"]["home"]["team"]
 
     def team_abbr(team_obj: dict) -> str:
-        """Returns the best available team abbreviation."""
         return (
             team_obj.get("abbreviation")
             or team_obj.get("triCode")
@@ -246,6 +269,7 @@ def format_game_item(g: dict) -> str:
     detailed = status.get("detailedState", "")
     abstract = status.get("abstractGameState", "")
 
+    # Try to fetch live data with retry
     live = None
     for attempt in range(RETRY_IF_NO_LINESCORE + 1):
         live, _ = fetch_game_live(pk)
@@ -256,14 +280,54 @@ def format_game_item(g: dict) -> str:
     if live:
         parsed = extract_score_and_inning(live)
 
-        if parsed["away_score"] or parsed["home_score"] or parsed["inning_abbrev"]:
-            score_part = f"{away_abbr} {parsed['away_score']} @ {home_abbr} {parsed['home_score']}"
-            extra = parsed["inning_abbrev"] or parsed["state_text"] or detailed or abstract
+        score_part = f"{away_abbr} {parsed['away_score']} @ {home_abbr} {parsed['home_score']}"
 
+        # Determine inning number and half (T/B) robustly
+        ls = live.get("liveData", {}).get("linescore", {}) or {}
+        inning_state = (ls.get("inningState") or "").lower()
+        inning_num = ls.get("currentInning")
 
-            return escape(f"{score_part} — {extra}")
+        # Fallback: try to parse digits from parsed['inning_abbrev'] or linescore ordinals
+        if not inning_num:
+            raw_abbrev = parsed.get("inning_abbrev", "") or ls.get("inningOrdinal") or ls.get("currentInningOrdinal") or ""
+            digits = "".join(ch for ch in str(raw_abbrev) if ch.isdigit())
+            inning_num = int(digits) if digits else None
 
+        # Final fallback to 1
+        if not inning_num:
+            inning_num = 1
+
+        # Decide top/bottom
+        if inning_state.startswith("top"):
+            inning = f"T{inning_num}"
+        elif inning_state.startswith("bottom"):
+            inning = f"B{inning_num}"
+        else:
+            # Try plays.currentPlay.about.halfInning if inningState is ambiguous
+            half = (
+                live.get("liveData", {})
+                .get("plays", {})
+                .get("currentPlay", {})
+                .get("about", {})
+                .get("halfInning", "") or ""
+            )
+            half = half.lower()
+            if half.startswith("bottom"):
+                inning = f"B{inning_num}"
+            elif half.startswith("top"):
+                inning = f"T{inning_num}"
+            else:
+                # conservative default
+                inning = f"T{inning_num}"
+
+        # New requested format: "T3: NYY 2 @ TB 0"
+        return escape(f"{inning}: {score_part}")
+
+    # Pregame / fallback
     return escape(f"{away_abbr} @ {home_abbr} • {detailed or abstract} {start_est}")
+
+
+
 
 def build_ticker(
     items: list[str],
@@ -281,7 +345,18 @@ def build_ticker(
     Builds the full SVG-based LED ticker display.
     """
 
+    # ORIGINAL TEXT
     text = "•".join(items) if items else "No games found"
+
+    # LED-SAFE NORMALIZATION (NO inning transformations)
+    text = (
+        text.replace("—", "-")        # em dash → hyphen
+            .replace("•", "|")        # bullet → pipe
+            .replace("Scheduled", "SCH")
+            .replace("Pre-Game", "PRE")
+    )
+
+    print("TICKER RAW TEXT:", text)
 
     FONT_5x7 = {
         "A": ["01110","10001","10001","11111","10001","10001","10001"],
@@ -324,46 +399,37 @@ def build_ticker(
         "-": ["00000","00000","00000","11111","00000","00000","00000"],
         ":": ["00000","00100","00100","00000","00100","00100","00000"],
         ".": ["00000","00000","00000","00000","00000","00110","00110"],
-        "•": ["00000","00000","00100","00000","00100","00000","00000"],
+        "|": ["00100","00100","00100","00100","00100","00100","00100"],
         "@": ["01110","10001","10111","10101","10111","10000","01110"],
     }
 
+    # Convert characters to LED glyphs
     chars = [ch.upper() if ch.upper() in FONT_5x7 else " " for ch in text]
 
     char_width = 5
-    gap_cols = 0
+    dot_total = dot_diameter + dot_spacing
     columns = []
 
     for ch in chars:
         pattern = FONT_5x7.get(ch, FONT_5x7[" "])
         for col_idx in range(char_width):
-            col_bits = "".join(
-                pattern[row][col_idx] if col_idx < len(pattern[row]) else "0"
-                for row in range(rows)
-            )
+            col_bits = "".join(pattern[row][col_idx] for row in range(rows))
             columns.append(col_bits)
 
     total_cols = len(columns)
-    dot_total = dot_diameter + dot_spacing
     svg_width = total_cols * dot_total
     svg_height = height_px
 
     scroll_distance = max(0, svg_width - 1000)
-    if scroll_distance <= 0:
-        duration = 6.0
-    else:
-        duration = max(1.5, scroll_distance / speed_px_per_s)
+    duration = 6.0 if scroll_distance <= 0 else max(1.5, scroll_distance / speed_px_per_s)
 
     circles = []
     for c_idx, col in enumerate(columns):
         x = c_idx * dot_total + dot_diameter / 2
         for r_idx in range(rows):
             y = r_idx * dot_total + dot_diameter / 2 + (svg_height - rows * dot_total) / 2
-            bit = col[r_idx]
-            fill = color if bit == "1" else "#111"
-            circles.append(
-                f'<circle cx="{x}" cy="{y}" r="{dot_diameter/2}" fill="{fill}" />'
-            )
+            fill = color if col[r_idx] == "1" else "#111"
+            circles.append(f'<circle cx="{x}" cy="{y}" r="{dot_diameter/2}" fill="{fill}" />')
 
     svg = f"""
     <div style="width:100%; background:{bg}; padding:{padding_px}px; border-radius:8px; overflow:hidden;">

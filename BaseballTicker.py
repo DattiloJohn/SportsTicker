@@ -51,7 +51,7 @@ st.components.v1.html(status_html, height=56)
 
 safe_ts = json.dumps(last_updated_str)
 title_js = f"""
-<script>
+<script>ß
 try {{
     const originalTitle = document.title;
     const ts = {safe_ts};
