@@ -1,0 +1,169 @@
+{
+ "events": [
+  {
+   "id": "401873035",
+   "date": "2026-11-02T01:20Z",
+   "shortName": "PHI @ WSH",
+   "status": {
+    "clock": 499.0,
+    "displayClock": "8:19",
+    "period": 2,
+    "type": {
+     "id": "2",
+     "name": "STATUS_IN_PROGRESS",
+     "state": "in",
+     "completed": false,
+     "description": "In Progress",
+     "detail": "8:19 - 2nd Quarter",
+     "shortDetail": "8:19 - 2nd"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "3",
+       "team": {
+        "abbreviation": "WSH",
+        "displayName": "Washington Commanders"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "10",
+       "team": {
+        "abbreviation": "PHI",
+        "displayName": "Philadelphia Eagles"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401873026",
+   "date": "2026-11-01T18:00Z",
+   "shortName": "BAL @ BUF",
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 4,
+    "type": {
+     "id": "3",
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "description": "Final",
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "36",
+       "team": {
+        "abbreviation": "BUF",
+        "displayName": "Buffalo Bills"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "10",
+       "team": {
+        "abbreviation": "BAL",
+        "displayName": "Baltimore Ravens"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401873031",
+   "date": "2026-11-01T18:00Z",
+   "shortName": "TEN @ CIN",
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 5,
+    "type": {
+     "id": "3",
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "description": "Final",
+     "detail": "Final/OT",
+     "shortDetail": "Final/OT",
+     "altDetail": "OT"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "43",
+       "team": {
+        "abbreviation": "CIN",
+        "displayName": "Cincinnati Bengals"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "36",
+       "team": {
+        "abbreviation": "TEN",
+        "displayName": "Tennessee Titans"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401873036",
+   "date": "2026-11-03T01:15Z",
+   "shortName": "CHI @ SEA",
+   "status": {
+    "clock": 0.0,
+    "displayClock": "0:00",
+    "period": 0,
+    "type": {
+     "id": "1",
+     "name": "STATUS_SCHEDULED",
+     "state": "pre",
+     "completed": false,
+     "description": "Scheduled",
+     "detail": "Mon, November 2nd at 8:15 PM EST",
+     "shortDetail": "11/2 - 8:15 PM EST"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "0",
+       "team": {
+        "abbreviation": "SEA",
+        "displayName": "Seattle Seahawks"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "0",
+       "team": {
+        "abbreviation": "CHI",
+        "displayName": "Chicago Bears"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

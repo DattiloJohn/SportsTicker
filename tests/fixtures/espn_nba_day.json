@@ -1,0 +1,86 @@
+{
+ "events": [
+  {
+   "id": "401909903",
+   "date": "2026-11-01T20:30Z",
+   "shortName": "BOS @ ORL",
+   "status": {
+    "clock": 720.0,
+    "displayClock": "12:00",
+    "period": 4,
+    "type": {
+     "id": "3",
+     "name": "STATUS_FINAL",
+     "state": "post",
+     "completed": true,
+     "description": "Final",
+     "detail": "Final",
+     "shortDetail": "Final"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "97",
+       "team": {
+        "abbreviation": "ORL",
+        "displayName": "Orlando Magic"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "108",
+       "team": {
+        "abbreviation": "BOS",
+        "displayName": "Boston Celtics"
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "401909905",
+   "date": "2026-11-02T01:30Z",
+   "shortName": "LAC @ GS",
+   "status": {
+    "clock": 330.0,
+    "displayClock": "5:30",
+    "period": 2,
+    "type": {
+     "id": "2",
+     "name": "STATUS_IN_PROGRESS",
+     "state": "in",
+     "completed": false,
+     "description": "In Progress",
+     "detail": "5:30 - 2nd Quarter",
+     "shortDetail": "5:30 - 2nd"
+    }
+   },
+   "competitions": [
+    {
+     "competitors": [
+      {
+       "homeAway": "home",
+       "score": "45",
+       "team": {
+        "abbreviation": "GS",
+        "displayName": "Golden State Warriors"
+       }
+      },
+      {
+       "homeAway": "away",
+       "score": "41",
+       "team": {
+        "abbreviation": "LAC",
+        "displayName": "LA Clippers"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
